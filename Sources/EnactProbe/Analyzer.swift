@@ -36,8 +36,10 @@ public enum Checks {
     public static let D = Stream.chunkSeconds
     /// Budgets. An input can only condition the next chunk to start, so input-to-photon is between
     /// one and two chunk lengths plus transport and decode.
-    public static let latencyP50Budget = 1.30
-    public static let latencyP95Budget = 1.65
+    /// p50: half a chunk of waiting + one chunk of generation + 0.3 s for transport and decode.
+    /// p95: two chunks + 0.38 s. Faults that cost a chunk or more land far outside both.
+    public static let latencyP50Budget = 1.5 * D + 0.3
+    public static let latencyP95Budget = 2 * D + 0.38
     public static let bargeInBudget = 2 * D + 0.3
     public static let stallGap = D + 0.3
     public static let avBudgetMs = 5.0

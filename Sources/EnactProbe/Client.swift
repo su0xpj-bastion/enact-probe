@@ -99,21 +99,30 @@ public final class SyntheticViewer {
         let done = DispatchSemaphore(value: 0)
         client.onFinish = { done.signal() }
         client.start(chunks: chunks)
-        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "viewer"))
-        var tick = 0, noted = false
-        timer.schedule(deadline: .now(), repeating: 1.0 / Double(Stream.fps), leeway: .milliseconds(1))
-        timer.setEventHandler {
-            let a = Double(tick) / 24.0
-            client.sendInput(button: 1, x: 0.5 + 0.4 * cos(a), y: 0.5 + 0.4 * sin(a))
-            tick += 1
-            if !noted && client.now() > Double(noteAtChunk) * Stream.chunkSeconds + 0.2 {
-                noted = true
-                client.sendNote("Alice, your first line is…")
+        // Input sampling runs on its own high-priority thread against absolute deadlines (sample k at
+        // k/24 s): a GCD repeating timer silently drops fires when the CPU is busy decoding video,
+        // which on a 3-core CI VM cut the rate to 17/s (input.cadence caught it).
+        var running = true
+        let sampler = Thread {
+            let start = Date()
+            var tick = 0, noted = false
+            while running {
+                let a = Double(tick) / 24.0
+                client.sendInput(button: 1, x: 0.5 + 0.4 * cos(a), y: 0.5 + 0.4 * sin(a))
+                if !noted && client.now() > Double(noteAtChunk) * Stream.chunkSeconds + 0.2 {
+                    noted = true
+                    client.sendNote("Alice, your first line is…")
+                }
+                tick += 1
+                let next = start.addingTimeInterval(Double(tick) / Double(Stream.fps))
+                let wait = next.timeIntervalSinceNow
+                if wait > 0 { Thread.sleep(forTimeInterval: wait) }
             }
         }
-        timer.resume()
+        sampler.qualityOfService = .userInteractive
+        sampler.start()
         _ = done.wait(timeout: .now() + timeout)
-        timer.cancel()
+        running = false
         client.stop()
         return Analyzer.report(client)
     }
