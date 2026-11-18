@@ -16,6 +16,7 @@ public struct Report: Codable {
     public var inputsSent = 0
     public var inputRate = 0.0
     public var maxInputGap = 0.0
+    public var inputGapP99 = 0.0
     public var inputsMissing: [Int] = []
     public var inputsDuplicated: [Int] = []
     public var latencyP50 = 0.0
@@ -112,7 +113,9 @@ public enum Analyzer {
         r.inputsSent = c.sent.count
         if let first = c.sent.first, let last = c.sent.last, last.at > first.at {
             r.inputRate = Double(c.sent.count - 1) / (last.at - first.at)
-            r.maxInputGap = zip(c.sent, c.sent.dropFirst()).map { $1.at - $0.at }.max() ?? 0
+            let gaps = zip(c.sent, c.sent.dropFirst()).map { $1.at - $0.at }
+            r.maxInputGap = gaps.max() ?? 0
+            r.inputGapP99 = pct(gaps, 0.99)
         }
         // Only samples sent early enough that a later chunk could still carry them.
         let lastCut = Double(max(0, c.expected - 1)) * D
@@ -164,8 +167,11 @@ public enum Analyzer {
         check("stream.frame-sequence", r.frameIDsInOrder, r.firstBadFrame ?? "")
         check("stream.pts-continuous", r.ptsBreaks == 0, "\(r.ptsBreaks) breaks; first: \(r.firstPtsBreak ?? "")")
         check("stream.no-stalls", r.stalls == 0, "\(r.stalls) stalls, longest gap \(f(r.maxArrivalGap))")
-        check("input.cadence", abs(r.inputRate - 24) < 2 && r.maxInputGap < 0.1,
-              String(format: "%.1f samples/s, max gap %.0f ms", r.inputRate, r.maxInputGap * 1000))
+        // In frame terms: no gap of 3 frame intervals (125 ms) or more, 99% under 2 (83 ms).
+        // A single late tick from OS scheduling passes; dropping samples does not.
+        let frame = 1.0 / Double(Stream.fps)
+        check("input.cadence", abs(r.inputRate - 24) < 2 && r.maxInputGap < 3 * frame && r.inputGapP99 < 2 * frame,
+              String(format: "%.1f samples/s, max gap %.0f ms, p99 gap %.0f ms", r.inputRate, r.maxInputGap * 1000, r.inputGapP99 * 1000))
         check("input.consumed-once", r.inputsMissing.isEmpty && r.inputsDuplicated.isEmpty,
               "missing \(r.inputsMissing.count) (first \(r.inputsMissing.prefix(5))), duplicated \(r.inputsDuplicated.prefix(5))")
         check("input.latency", r.latencyP50 <= Checks.latencyP50Budget && r.latencyP95 <= Checks.latencyP95Budget,

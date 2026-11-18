@@ -33,7 +33,7 @@ App/                 SwiftUI iPhone app (touch → 24 Hz samples, note button, l
 | # | Use case | Check | How it is measured |
 |---|---|---|---|
 | 1 | Touch-to-photon latency | `input.latency` | send time of sample *s* → first decoded frame whose barcode B ≥ *s*; p50 ≤ 1.5 chunks + 0.3 s (1.36 s), p95 ≤ 2 chunks + 0.38 s (1.80 s) |
-| 2 | Input/latent alignment | `input.cadence`, `input.consumed-once` | samples are sent at 24/s and no gap exceeds 100 ms; every sample conditions exactly one chunk |
+| 2 | Input/latent alignment | `input.cadence`, `input.consumed-once` | 24 samples/s, no gap of 3 frame intervals (125 ms), 99% of gaps under 2 (83 ms); every sample conditions exactly one chunk |
 | 3 | Chunk-boundary seams | `stream.frame-sequence`, `stream.pts-continuous`, `stream.frames-readable` | frame numbers run 0…N−1 with no repeats; media time is exact in 1/24000 s ticks |
 | 4 | Streaming playback | `stream.complete`, `stream.no-stalls` | every chunk arrives and decodes; no gap between arrivals exceeds a chunk + 0.3 s |
 | 5 | Device health | XCTest `XCTClockMetric`/`XCTCPUMetric`/`XCTMemoryMetric`; XCUITest app CPU/memory; thermal state | |
