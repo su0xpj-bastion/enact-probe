@@ -93,12 +93,13 @@ public enum ChunkRenderer {
     }
 
     static func draw(id: Int, plan: ChunkPlan, into p: UnsafeMutablePointer<UInt8>, row: Int) {
+        // Fill one row, then copy it: per-pixel loops are ~50x slower in a debug build,
+        // enough to make the stand-in generator miss real time on a CI VM.
         let t = plan.tint
-        for y in 0..<Stream.height {
-            for x in 0..<Stream.width {
-                let i = y * row + x * 4
-                p[i] = t.b; p[i + 1] = t.g; p[i + 2] = t.r; p[i + 3] = 255
-            }
+        var line = [UInt8](repeating: 255, count: Stream.width * 4)
+        for x in 0..<Stream.width { line[x * 4] = t.b; line[x * 4 + 1] = t.g; line[x * 4 + 2] = t.r }
+        line.withUnsafeBytes { src in
+            for y in 0..<Stream.height { memcpy(p + y * row, src.baseAddress!, Stream.width * 4) }
         }
         // Cursor: where the viewer's last input put it.
         let cx = Int(plan.cursor.x * 600) + 10, cy = Int(plan.cursor.y * 150) + 160

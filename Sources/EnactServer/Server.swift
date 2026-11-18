@@ -96,11 +96,14 @@ final class Session {
 
         let plan = ChunkPlan(index: k, frameIDs: frameIDs(k), startTicks: startTicks(k), inputSeq: lastSeq, beat: beat(k, cut: cut),
                              tint: tint(k), cursor: cursor, audioDelaySamples: ServerFault.on(.audioDrift) ? 48 * k : 0)
-        let header = ChunkHeader(chunk: k, beat: plan.beat, inputs: take.map { $0.seq }, startTicks: plan.startTicks)
+        var header = ChunkHeader(chunk: k, beat: plan.beat, inputs: take.map { $0.seq }, startTicks: plan.startTicks)
         schedule(k + 1)
         renderQ.async {
             do {
-                let msg = try Wire.pack(header, mp4: ChunkRenderer.render(plan))
+                let t = Date()
+                let mp4 = try ChunkRenderer.render(plan)
+                header.renderMs = Date().timeIntervalSince(t) * 1000
+                let msg = try Wire.pack(header, mp4: mp4)
                 // Ready at (k+1)*D, like a real-time generator; a late chunk misses that.
                 let late = ServerFault.on(.lateChunk) && k % 8 == 7 ? 0.9 : 0
                 self.q.asyncAfter(deadline: .now() + max(0, Double(k + 1) * D + late - self.now())) { self.send(msg) }

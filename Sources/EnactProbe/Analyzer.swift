@@ -25,6 +25,7 @@ public struct Report: Codable {
     public var clicksMissing = 0
     public var anchorMaxDelta = 0
     public var decodeP95Ms = 0.0
+    public var renderP95Ms = 0.0
     public var errors: [String] = []
     /// check name -> nil (pass) or why it failed.
     public var checks: [String: String] = [:]
@@ -100,6 +101,10 @@ public enum Analyzer {
             if b - a > Checks.stallGap { r.stalls += 1 }
         }
         r.decodeP95Ms = pct(c.arrivals.map { ($0.readyAt - $0.arrivedAt) * 1000 }, 0.95)
+        r.renderP95Ms = pct(c.arrivals.compactMap { $0.chunk.header.renderMs }, 0.95)
+        if r.renderP95Ms > D * 1000 * 0.8 {
+            r.errors.append(String(format: "generator too slow for real time on this machine: render p95 %.0f ms vs %.0f ms chunks", r.renderP95Ms, D * 1000))
+        }
 
         // Inputs: rate, gaps, consumed exactly once.
         r.inputsSent = c.sent.count

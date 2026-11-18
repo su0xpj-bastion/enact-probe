@@ -28,8 +28,11 @@ public struct ChunkHeader: Codable, Equatable {
     /// Media time of the chunk's first frame (Stream.timescale ticks). MP4 chunks restart at zero,
     /// so this is the stream timeline, as a fragmented MP4's base decode time would be.
     public var startTicks: Int64
-    public init(chunk: Int, beat: Int, inputs: [Int], startTicks: Int64) {
-        self.chunk = chunk; self.beat = beat; self.inputs = inputs; self.startTicks = startTicks
+    /// How long the server took to render + encode this chunk. If this nears the chunk length the
+    /// generator, not the client, is the bottleneck; the report says so instead of blaming the client.
+    public var renderMs: Double?
+    public init(chunk: Int, beat: Int, inputs: [Int], startTicks: Int64, renderMs: Double? = nil) {
+        self.chunk = chunk; self.beat = beat; self.inputs = inputs; self.startTicks = startTicks; self.renderMs = renderMs
     }
 }
 

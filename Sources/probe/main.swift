@@ -17,9 +17,9 @@ case "run":
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         print(String(data: try! enc.encode(r), encoding: .utf8)!)
     } else {
-        print(String(format: "chunks %d/%d  frames %d  latency p50 %.0f ms p95 %.0f ms  barge-in %@  A/V max %.1f ms  stalls %d  decode p95 %.0f ms",
+        print(String(format: "chunks %d/%d  frames %d  latency p50 %.0f ms p95 %.0f ms  barge-in %@  A/V max %.1f ms  stalls %d  decode p95 %.0f ms  render p95 %.0f ms",
                      r.chunksReceived, r.chunksExpected, r.frames, r.latencyP50 * 1000, r.latencyP95 * 1000,
-                     r.bargeIn.map { String(format: "%.0f ms", $0 * 1000) } ?? "never", r.avOffsetMaxMs, r.stalls, r.decodeP95Ms))
+                     r.bargeIn.map { String(format: "%.0f ms", $0 * 1000) } ?? "never", r.avOffsetMaxMs, r.stalls, r.decodeP95Ms, r.renderP95Ms))
         for n in Checks.names {
             print(r.checks[n] == nil ? "  PASS  \(n)" : "  FAIL  \(n)  \(r.checks[n]!)")
         }
