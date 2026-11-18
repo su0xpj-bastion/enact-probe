@@ -1,0 +1,45 @@
+# XcodeGen: `cd App && xcodegen` writes EnactProbe.xcodeproj (not committed).
+name: EnactProbe
+options:
+  bundleIdPrefix: com.enactprobe
+  deploymentTarget: { iOS: "17.0" }
+packages:
+  EnactProbe:
+    path: ..
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+targets:
+  EnactProbeApp:
+    type: application
+    platform: iOS
+    sources: [Shared]
+    dependencies: [{ package: EnactProbe, product: EnactProbe }]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.enactprobe.app
+      GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: Generated/Info.plist
+      properties:
+        CFBundleDisplayName: Enact Probe
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        # Plain ws:// to the host during tests; production would be wss://.
+        NSAppTransportSecurity: { NSAllowsLocalNetworking: true }
+  EnactProbeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies: [{ target: EnactProbeApp }]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.enactprobe.uitests
+      TEST_TARGET_NAME: EnactProbeApp
+      GENERATE_INFOPLIST_FILE: YES
+schemes:
+  EnactProbeApp:
+    build: { targets: { EnactProbeApp: all, EnactProbeUITests: [test] } }
+    test: { targets: [EnactProbeUITests] }

@@ -1,0 +1,8 @@
+.build/
+.venv/
+build/
+App/EnactProbe.xcodeproj/
+App/Generated/
+__pycache__/
+.pytest_cache/
+.DS_Store
