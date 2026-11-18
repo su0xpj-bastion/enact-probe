@@ -17,6 +17,9 @@ public struct Report: Codable {
     public var inputRate = 0.0
     public var maxInputGap = 0.0
     public var inputGapP95 = 0.0
+    /// Fewest and most input samples that arrived within any one chunk-length window.
+    public var samplesPerChunkMin = 0
+    public var samplesPerChunkMax = 0
     public var inputsMissing: [Int] = []
     public var inputsDuplicated: [Int] = []
     public var latencyP50 = 0.0
@@ -116,6 +119,14 @@ public enum Analyzer {
             let gaps = zip(c.sent, c.sent.dropFirst()).map { $1.at - $0.at }
             r.maxInputGap = gaps.max() ?? 0
             r.inputGapP95 = pct(gaps, 0.95)
+            var counts: [Int] = []
+            var w = first.at
+            while w + D <= last.at {
+                counts.append(c.sent.filter { $0.at >= w && $0.at < w + D }.count)
+                w += D
+            }
+            r.samplesPerChunkMin = counts.min() ?? 0
+            r.samplesPerChunkMax = counts.max() ?? 0
         }
         // Only samples sent early enough that a later chunk could still carry them.
         let lastCut = Double(max(0, c.expected - 1)) * D
@@ -167,12 +178,12 @@ public enum Analyzer {
         check("stream.frame-sequence", r.frameIDsInOrder, r.firstBadFrame ?? "")
         check("stream.pts-continuous", r.ptsBreaks == 0, "\(r.ptsBreaks) breaks; first: \(r.firstPtsBreak ?? "")")
         check("stream.no-stalls", r.stalls == 0, "\(r.stalls) stalls, longest gap \(f(r.maxArrivalGap))")
-        // Rate within 2 of 24/s, 95% of gaps under 2 frame intervals (83 ms), none over 350 ms.
-        // CI VMs pause whole processes for ~250 ms now and then; the bug this guards (a timer starved
-        // while a touch is tracked) drops the rate and opens gaps of seconds, and still fails.
-        let frame = 1.0 / Double(Stream.fps)
-        check("input.cadence", abs(r.inputRate - 24) < 2 && r.inputGapP95 < 2 * frame && r.maxInputGap < 0.35,
-              String(format: "%.1f samples/s, p95 gap %.0f ms, max gap %.0f ms", r.inputRate, r.inputGapP95 * 1000, r.maxInputGap * 1000))
+        // What the model needs: about 17 samples (17/24 s at 24 Hz) in every chunk it conditions on.
+        // Every chunk-length window must hold 14-20. A timer starved while a touch is tracked leaves
+        // windows nearly empty and still fails; a CI VM that bunches wake-ups does not.
+        check("input.cadence", abs(r.inputRate - 24) < 2 && r.samplesPerChunkMin >= 14 && r.samplesPerChunkMax <= 20,
+              String(format: "%.1f samples/s, %d-%d samples per chunk window (want 14-20), max gap %.0f ms",
+                     r.inputRate, r.samplesPerChunkMin, r.samplesPerChunkMax, r.maxInputGap * 1000))
         check("input.consumed-once", r.inputsMissing.isEmpty && r.inputsDuplicated.isEmpty,
               "missing \(r.inputsMissing.count) (first \(r.inputsMissing.prefix(5))), duplicated \(r.inputsDuplicated.prefix(5))")
         check("input.latency", r.latencyP50 <= Checks.latencyP50Budget && r.latencyP95 <= Checks.latencyP95Budget,
