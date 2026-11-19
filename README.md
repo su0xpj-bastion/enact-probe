@@ -3,8 +3,6 @@
 <!-- plain-english:begin -->
 [![ci](https://github.com/su0xpj-bastion/enact-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/su0xpj-bastion/enact-probe/actions/workflows/ci.yml)
 
-## In plain English
-
 A test kit for **live AI video**: apps where the video is generated while you
 watch, and it reacts to your finger and your instructions in short chunks (about 0.7 s each).
 It answers the questions a viewer feels:
