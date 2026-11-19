@@ -13,7 +13,18 @@ final class StreamTests: XCTestCase {
         server.onReady = { port = $0; ready.signal() }
         server.start()
         ready.wait()
-        return SyntheticViewer.run(url: URL(string: "ws://127.0.0.1:\(port)")!)
+        // Same rule as tools/fault_matrix.py (EP-5): a session that fails ONLY timing checks on a
+        // shared CI VM is re-run, up to 3 times, and each retry is printed. Any functional failure
+        // is returned at once; three timing failures in a row still fail.
+        let timing: Set<String> = ["input.latency", "stream.no-stalls", "input.cadence"]
+        var r = SyntheticViewer.run(url: URL(string: "ws://127.0.0.1:\(port)")!)
+        for attempt in 2...3 {
+            let failed = Set(r.checks.keys)
+            guard !failed.isEmpty, failed.isSubset(of: timing) else { break }
+            print("RETRY session \(attempt): timing-only mismatch on a loaded machine: \(r.checks)")
+            r = SyntheticViewer.run(url: URL(string: "ws://127.0.0.1:\(port)")!)
+        }
+        return r
     }()
 
     func check(_ name: String) {

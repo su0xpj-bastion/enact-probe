@@ -31,7 +31,7 @@ Severity: S1 (data loss or privacy), S2 (wrong output), S3 (broken interaction),
 **Test-infrastructure bug (fixed)**
 
 - **What happened.** On a GitHub macOS runner, the no-fault session recorded one 1.5 s gap. That tripped `stream.no-stalls` and pushed `input.latency` p95 to 2.3 s, so the build went red with no code change.
-- **Fix.** `tools/fault_matrix.py` now retries a session (up to 3 times) only when it differs from the pinned result in timing checks alone (`input.latency`, `stream.no-stalls`). Each retry is printed as `RETRY ... timing-only mismatch`, so flakes stay visible instead of hidden. A functional mismatch (frame sequence, PTS, consumed-once, barge-in, A/V sync) is never retried, and three timing failures in a row still fail the build.
+- **Fix.** `tools/fault_matrix.py` now retries a session (up to 3 times) only when it differs from the pinned result in timing checks alone (`input.latency`, `stream.no-stalls`). Each retry is printed as `RETRY ... timing-only mismatch`, so flakes stay visible instead of hidden. A functional mismatch (frame sequence, PTS, consumed-once, barge-in, A/V sync) is never retried, and three timing failures in a row still fail the build. The XCTest session in `StreamTests` follows the same rule; on the next CI run it hit the same thing (p95 1.90 s against a 1.80 s budget).
 
 ### EP-6 · The Simulator UI test failed on timing, with every frame correct
 **Test-infrastructure bug (fixed)**
