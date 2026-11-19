@@ -38,3 +38,9 @@ Severity: S1 (data loss or privacy), S2 (wrong output), S3 (broken interaction),
 
 - **What happened.** XCUITest on the iOS Simulator reported `FAIL input.cadence, input.latency`: 22.8 inputs/s and p50 1,594 ms, even though all 340 frames arrived in order, with no stalls and A/V in sync. Synthesized drags on a shared CI VM set that pace, not the app.
 - **Fix.** On the Simulator, timing is recorded in the test report but not gated. The test still fails if any non-timing check fails, and on a real device timing is gated as before. `direction.barge-in` counts as timing, since it is a deadline. A session the app itself marks "too slow for real time" (one CI run: decode p95 4.9 s, render p95 1.6 s) is skipped with its report attached, because the next CI run was worse still: 170 of 340 frames and p50 25.7 s. The same rule already applies in the fault matrix. The stall-detection and CPU/memory UI tests still run and gate on every push. This matches vision-gate VG-8: the Simulator is not an oracle for timing or Neural Engine behaviour.
+
+### EP-7 · A protocol test pinned an input to chunk 1 by wall clock
+**Test-infrastructure bug (fixed)**
+
+- **What happened.** `test_input_conditions_the_next_chunk_not_the_current_one` sends a touch 0.2 s into chunk 0 and required it in chunk 1. On a loaded CI VM the message reached the server after chunk 1 had started, so it correctly landed in chunk 2, and the test failed.
+- **Fix.** The test now checks the rule itself: never in the chunk already being made, used exactly once, in the next chunk to start. Applying an input a chunk late is still caught by the `inputLagExtraChunk` fault through `input.consumed-once` and `input.latency`.

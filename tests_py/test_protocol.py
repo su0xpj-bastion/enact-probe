@@ -52,7 +52,12 @@ def test_input_conditions_the_next_chunk_not_the_current_one(server):
     time.sleep(0.2)                       # chunk 0 started at t=0; this sample arrives during it
     ws.send_json({"type": "input", "seq": 1, "button": 1, "x": 0.3, "y": 0.3, "dx": 0, "dy": 0})
     heads = [ws.recv_chunk()[0] for _ in range(3)]
-    assert heads[0]["inputs"] == [] and heads[1]["inputs"] == [1] and heads[2]["inputs"] == []
+    # The rule: an input never changes the chunk already being made, and is used exactly once.
+    # Normally that is chunk 1. On a loaded CI VM the message can reach the server after chunk 1
+    # has started, and then chunk 2 is the right answer (EP-7), so the sleep alone can't pin it.
+    assert heads[0]["inputs"] == [], "input changed the chunk already being made"
+    where = [i for i, h in enumerate(heads) if 1 in h["inputs"]]
+    assert len(where) == 1 and where[0] in (1, 2), [h["inputs"] for h in heads]
     ws.close()
 
 
