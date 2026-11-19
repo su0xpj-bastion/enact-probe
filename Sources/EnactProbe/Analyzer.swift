@@ -136,9 +136,10 @@ public enum Analyzer {
         r.inputsMissing = eligible.map { $0.seq }.filter { counts[$0] == nil }
         r.inputsDuplicated = counts.filter { $0.value > 1 }.map { $0.key }.sorted()
 
-        // Input-to-photon: when a frame showing this sample (or a later one) was ready to display.
+        // Input-to-photon, for samples the model actually used: when a frame showing this sample (or
+        // a later one) was ready. Samples that were dropped are input.consumed-once's job.
         var latencies: [Double] = []
-        for s in eligible {
+        for s in eligible where counts[s.seq] != nil {
             if let a = arrivals.first(where: { $0.chunk.frames.contains { ($0.inputSeq ?? 0) >= s.seq } }) {
                 latencies.append(a.readyAt - s.at)
             }

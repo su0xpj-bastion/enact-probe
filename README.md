@@ -32,7 +32,7 @@ App/                 SwiftUI iPhone app (touch → 24 Hz samples, note button, l
 
 | # | Use case | Check | How it is measured |
 |---|---|---|---|
-| 1 | Touch-to-photon latency | `input.latency` | send time of sample *s* → first decoded frame whose barcode B ≥ *s*; p50 ≤ 1.5 chunks + 0.3 s (1.36 s), p95 ≤ 2 chunks + 0.38 s (1.80 s) |
+| 1 | Touch-to-photon latency | `input.latency` | for samples the model used: send time of sample *s* → first decoded frame whose barcode B ≥ *s*; p50 ≤ 1.5 chunks + 0.3 s (1.36 s), p95 ≤ 2 chunks + 0.38 s (1.80 s) |
 | 2 | Input/latent alignment | `input.cadence`, `input.consumed-once` | 24 ± 2 samples/s, and 14-20 samples in every chunk-length window (17 expected); every sample conditions exactly one chunk |
 | 3 | Chunk-boundary seams | `stream.frame-sequence`, `stream.pts-continuous`, `stream.frames-readable` | frame numbers run 0…N−1 with no repeats; media time is exact in 1/24000 s ticks |
 | 4 | Streaming playback | `stream.complete`, `stream.no-stalls` | every chunk arrives and decodes; no gap between arrivals exceeds a chunk + 0.3 s |
@@ -84,5 +84,6 @@ scripts/ci/ui.sh                               # XCUITest on an iPhone simulator
 ## Honest limits
 
 - `enactd` is a stand-in. It renders test frames, not a diffusion model. What it reproduces is the timing, conditioning and transport contract of a causal chunked generator, which is what the client tests exercise.
+- If the stand-in generator itself misses real time (a CI VM without hardware video encode), the report says so, and the fault matrix retries that session and then skips it as invalid instead of blaming the client.
 - Latency budgets are wall-clock times on shared CI machines. A clean local run has about 330 ms of headroom on p95; the input sampler runs on its own high-priority thread against absolute deadlines, because a GCD timer dropped to 17 samples/s on a CI VM.
 - The app shows each chunk's last frame as it lands; it does not play back at 24 fps. The checks use every decoded frame.

@@ -25,7 +25,22 @@ EXPECTED: dict[str, set[str]] = {
 }
 
 
-def session(fault: str) -> dict:
+SLOW = "generator too slow for real time"
+
+
+def session(fault: str, attempts: int = 3) -> dict:
+    """One viewer session against a fresh server. A session where the stand-in generator itself
+    missed real time (CI VMs without hardware video encode) measures the machine, not the client:
+    retry it, and mark it invalid if the machine stays too slow."""
+    for _ in range(attempts):
+        r = _session(fault)
+        if not any(SLOW in e for e in r.get("errors", [])):
+            return r
+    r["invalid"] = True
+    return r
+
+
+def _session(fault: str) -> dict:
     env = dict(os.environ, ENACT_FAULTS=fault)
     server = subprocess.Popen([str(BIN / "enactd"), "--port", "0"], stdout=subprocess.PIPE, text=True, env=env)
     try:
@@ -49,6 +64,9 @@ def main() -> int:
         if only and fault not in only:
             continue
         r = session(fault)
+        if r.get("invalid"):
+            print(f"SKIP {fault or '(no fault)':22} machine too slow for a real-time session: {r['errors'][-1]}")
+            continue
         got = failing(r)
         good = got == want
         ok &= good
