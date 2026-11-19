@@ -32,3 +32,9 @@ Severity: S1 (data loss or privacy), S2 (wrong output), S3 (broken interaction),
 
 - **What happened.** On a GitHub macOS runner, the no-fault session recorded one 1.5 s gap. That tripped `stream.no-stalls` and pushed `input.latency` p95 to 2.3 s, so the build went red with no code change.
 - **Fix.** `tools/fault_matrix.py` now retries a session (up to 3 times) only when it differs from the pinned result in timing checks alone (`input.latency`, `stream.no-stalls`). Each retry is printed as `RETRY ... timing-only mismatch`, so flakes stay visible instead of hidden. A functional mismatch (frame sequence, PTS, consumed-once, barge-in, A/V sync) is never retried, and three timing failures in a row still fail the build.
+
+### EP-6 · The Simulator UI test failed on timing, with every frame correct
+**Test-infrastructure bug (fixed)**
+
+- **What happened.** XCUITest on the iOS Simulator reported `FAIL input.cadence, input.latency`: 22.8 inputs/s and p50 1,594 ms, even though all 340 frames arrived in order, with no stalls and A/V in sync. Synthesized drags on a shared CI VM set that pace, not the app.
+- **Fix.** On the Simulator, timing is recorded in the test report but not gated. The test still fails if any non-timing check fails, and on a real device timing is gated as before. This matches vision-gate VG-8: the Simulator is not an oracle for timing or Neural Engine behaviour.
