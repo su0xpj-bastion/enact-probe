@@ -59,7 +59,11 @@ struct SessionView: View {
             Text("barge-in " + (r.bargeIn.map { String(format: "%.0f ms", $0 * 1000) } ?? "none")).accessibilityIdentifier("hud.bargeIn")
             Text("stalls \(r.stalls) · frames \(r.frames) · sequence \(r.frameIDsInOrder ? "ok" : "broken")").accessibilityIdentifier("hud.stream")
             Text(String(format: "inputs %d at %.1f/s · A/V max %.1f ms", r.inputsSent, r.inputRate, r.avOffsetMaxMs)).accessibilityIdentifier("hud.inputs")
-            Text("thermal \(model.thermal) · decode p95 \(Int(r.decodeP95Ms)) ms").accessibilityIdentifier("hud.device")
+            Text("thermal \(model.thermal) · decode p95 \(Int(r.decodeP95Ms)) ms · render p95 \(Int(r.renderP95Ms)) ms").accessibilityIdentifier("hud.device")
+            // Whether the timing numbers mean anything: if the stand-in generator itself missed real
+            // time (a loaded CI machine), timing reflects the machine, not the app.
+            Text(r.errors.contains { $0.contains("too slow for real time") } ? "validity: machine too slow for real time" : "validity: valid")
+                .accessibilityIdentifier("hud.validity")
         }
         .font(.system(.footnote, design: .monospaced))
     }
