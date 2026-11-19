@@ -27,6 +27,8 @@ decode, SwiftUI, XCTest, XCUITest, Python protocol tests, Jenkins and GitHub Act
 me to measure input the way the model consumes it (samples per chunk), and to flag when the
 test machine itself can't keep up instead of blaming the app.
 
+[Test plan](TEST_PLAN.md) · [Bugs found](BUGS.md) · [Test strategy](https://github.com/su0xpj-bastion/proof-sheet/blob/main/docs/TEST_STRATEGY.md)
+
 ---
 
 ## Technical detail
