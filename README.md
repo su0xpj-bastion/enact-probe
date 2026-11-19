@@ -5,7 +5,7 @@
 
 ## In plain English
 
-**What it is.** A test kit for **live AI video**: apps where the video is generated while you
+A test kit for **live AI video**: apps where the video is generated while you
 watch, and it reacts to your finger and your instructions in short chunks (about 0.7 s each).
 It answers the questions a viewer feels:
 - When I drag, how long until I see it?
@@ -13,19 +13,18 @@ It answers the questions a viewer feels:
 - If I give a new instruction, does it listen quickly?
 - Is the sound on the picture?
 
-**Why it matters.** A live AI app can "work" and still feel laggy, and users leave without
+A live AI app can "work" and still feel laggy, and users leave without
 saying why. This turns "feels laggy" into a number, and blocks a release when the number gets
 worse.
 
-**What I built.**
 - A stand-in AI video server in Swift. It streams real H.264 video chunks over a WebSocket, using each viewer input only for the next chunk, the way a real causal generator works.
 - An iPhone app and a command-line viewer that measure everything from what actually reached the screen and speakers. Every frame carries two barcodes: its number, and the last input it obeyed.
 - 11 checks (latency, freezes, frame order, timing, input cadence, barge-in, A/V sync, scene drift) and 8 planted server bugs, each proven caught.
 
-**Typical numbers.** Touch-to-screen is about 1.1 s typical and 1.5 s at the 95th percentile,
+Touch-to-screen is about 1.1 s typical and 1.5 s at the 95th percentile,
 which is what the design predicts (one to two chunks).
 
-**For a tech lead.** Swift, Network.framework, URLSession WebSockets, AVFoundation encode and
+Swift, Network.framework, URLSession WebSockets, AVFoundation encode and
 decode, SwiftUI, XCTest, XCUITest, Python protocol tests, Jenkins and GitHub Actions. CI taught
 me to measure input the way the model consumes it (samples per chunk), and to flag when the
 test machine itself can't keep up instead of blaming the app.
@@ -126,7 +125,7 @@ scripts/ci/ui.sh                               # XCUITest on an iPhone simulator
 <!-- set:begin -->
 ---
 
-**Part of a set.** Six small projects, one idea: test media apps with data that carries its own answer, and prove every test catches the bug it was written for.
+Six small projects, one idea: test media apps with data that carries its own answer, and prove every test catches the bug it was written for.
 
 - [frame-exact](https://github.com/su0xpj-bastion/frame-exact): timecode and edit maths, to the frame
 - [barcode-frames](https://github.com/su0xpj-bastion/barcode-frames): real video edits checked frame by frame
