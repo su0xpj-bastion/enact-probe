@@ -26,3 +26,9 @@ Severity: S1 (data loss or privacy), S2 (wrong output), S3 (broken interaction),
 
 - **What happened.** 17 frames at 24 fps is 17,000 ticks of 1/24000 s, while 0.708 s is 16,992 ticks. Stamping chunks at k × 0.708 s puts every chunk 8 ticks short.
 - **Guard.** `stream.pts-continuous` checks media time to the tick. The fault is `chunkClockDrift`.
+
+### EP-5 · A clean CI run failed on one 1.5 s VM pause
+**Test-infrastructure bug (fixed)**
+
+- **What happened.** On a GitHub macOS runner, the no-fault session recorded one 1.5 s gap. That tripped `stream.no-stalls` and pushed `input.latency` p95 to 2.3 s, so the build went red with no code change.
+- **Fix.** `tools/fault_matrix.py` now retries a session (up to 3 times) only when it differs from the pinned result in timing checks alone (`input.latency`, `stream.no-stalls`). Each retry is printed as `RETRY ... timing-only mismatch`, so flakes stay visible instead of hidden. A functional mismatch (frame sequence, PTS, consumed-once, barge-in, A/V sync) is never retried, and three timing failures in a row still fail the build.

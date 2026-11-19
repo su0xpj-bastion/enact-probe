@@ -26,17 +26,33 @@ EXPECTED: dict[str, set[str]] = {
 
 
 SLOW = "generator too slow for real time"
+# Checks that measure wall-clock timing. A shared CI VM can pause for a second and trip these on a
+# clean run. Functional checks (frame sequence, PTS, consumed-once, barge-in, A/V sync) never retry.
+TIMING = {"input.latency", "stream.no-stalls"}
 
 
 def session(fault: str, attempts: int = 3) -> dict:
-    """One viewer session against a fresh server. A session where the stand-in generator itself
-    missed real time (CI VMs without hardware video encode) measures the machine, not the client:
-    retry it, and mark it invalid if the machine stays too slow."""
+    """One viewer session against a fresh server.
+
+    - The stand-in generator itself missed real time (CI VMs without hardware video encode): the
+      session measures the machine, not the client. Retry; mark invalid if the machine stays slow.
+    - The result differs from the pinned set ONLY in timing checks: retry, and record each retry in
+      `flakes` so the report shows it. Any functional mismatch is returned at once, never retried.
+    """
+    flakes: list[dict] = []
     for _ in range(attempts):
         r = _session(fault)
-        if not any(SLOW in e for e in r.get("errors", [])):
-            return r
-    r["invalid"] = True
+        if any(SLOW in e for e in r.get("errors", [])):
+            continue
+        diff = failing(r) ^ EXPECTED.get(fault, set())
+        if diff and diff <= TIMING:
+            flakes.append({name: r["checks"].get(name, "passed") for name in sorted(diff)})
+            continue
+        r["flakes"] = flakes
+        return r
+    r["flakes"] = flakes
+    if not flakes:
+        r["invalid"] = True
     return r
 
 
@@ -69,6 +85,8 @@ def main() -> int:
             continue
         got = failing(r)
         good = got == want
+        for f in r.get("flakes", []):
+            print(f"RETRY {fault or '(no fault)':20} timing-only mismatch on a loaded machine: {f}")
         ok &= good
         label = fault or "(no fault)"
         print(f"{'ok ' if good else 'BAD'} {label:22} caught by {sorted(got) or '-'}"
